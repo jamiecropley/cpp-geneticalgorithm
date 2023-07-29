@@ -3,14 +3,14 @@
 #include <array>
 #include <random>
 
+const int MAX_GENERATIONS = 1000;  // to prevent infinite loops
+
 std::string crossover(const std::string& parentA, const std::string& parentB);
-double fitness(std::string individual);
-std::string mutate(std::string individual);
-std::string printArray(std::array<std::string, 4> array);
-std::string substring(std::string s, int start, int end);
+double fitness(const std::string& individual);
+std::string mutate(const std::string& individual);
+std::string printArray(const std::array<std::string, 4>& arr);
 
-
-    int random(int lo, int hi) {
+int random(int lo, int hi) {
     thread_local std::random_device rd;
     thread_local std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dis(std::min(lo, hi), std::max(lo, hi));
@@ -18,127 +18,72 @@ std::string substring(std::string s, int start, int end);
 }
 
 int main() {
-    std::array<std::string, 4> population;
+    std::array<std::string, 4> population = {"00000000", "00000010", "00001000", "00100001"};
+    int generation = 0;
 
-    population[0] = "00000000";
-    population[1] = "00000010";
-    population[2] = "00001000";
-    population[3] = "00100001";
-    int generation;
-
-    generation = 0;
-    bool maximumFitnessReached;
-
-    maximumFitnessReached = false;
-    while (!maximumFitnessReached) {
+    while (generation < MAX_GENERATIONS) {
         std::cout << generation << "    " << printArray(population) << std::endl;
-        double bestFitness;
+        double bestFitness = 0;
+        int bestIndex = 0;
+        int secondBestIndex = 0;
 
-        bestFitness = 0;
-        int bestIndex;
-
-        bestIndex = 0;
-        int secondBestIndex;
-
-        secondBestIndex = 0;
-        int i;
-
-        for (i = 0; i <= population.size() - 1; i++) {
-
-            double currentFitness;
-
-            currentFitness = fitness(population[i]);
+        for (int i = 0; i < population.size(); i++) {
+            double currentFitness = fitness(population[i]);
             if (currentFitness == 1.0) {
-                maximumFitnessReached = true;
+                std::cout << "Maximum fitness reached!" << std::endl;
+                return 0;
             } else {
-                if (currentFitness >= bestFitness) {
-                    bestFitness = currentFitness;
+                if (currentFitness > bestFitness) {
                     secondBestIndex = bestIndex;
+                    bestFitness = currentFitness;
                     bestIndex = i;
                 }
             }
         }
-        for (i = 0; i <= population.size() - 1; i++) {
+
+        for (int i = 0; i < population.size(); i++) {
             population[i] = mutate(crossover(population[bestIndex], population[secondBestIndex]));
         }
-        generation = generation + 1;
+        generation++;
     }
+
+    std::cout << "Max generations reached without achieving maximum fitness." << std::endl;
     return 0;
 }
 
 std::string crossover(const std::string& parentA, const std::string& parentB) {
-    std::string child;
-    int splitLength;
-
-    splitLength = random(0, (int) parentA.length() - 1);
-    child = substring(parentA, 0, splitLength) + substring(parentB, splitLength, parentB.length());
-
-    return child;
+    int splitLength = random(0, parentA.length() - 1);
+    return parentA.substr(0, splitLength) + parentB.substr(splitLength);
 }
 
-double fitness(std::string individual) {
-    double fitness;
-    int countOfOnes;
+double fitness(const std::string& individual) {
+    int countOfOnes = 0;
 
-    countOfOnes = 0;
-    int i;
-
-    for (i = 0; i <= individual.length() - 1; i++) {
-        if (individual[i] == '1') {
-            countOfOnes = countOfOnes + 1;
-        }
-    }
-    fitness = (double) countOfOnes / individual.length();
-
-    return fitness;
-}
-
-std::string mutate(std::string individual) {
-    if (random(0, individual.length() - 1) % 2 == 0) {
-    } else {
-        int changeIndex;
-
-        changeIndex = random(0, individual.length() - 1) % individual.length();
-        std::string changedCharacter;
-
-        if (individual[changeIndex] == '0') {
-            changedCharacter = '1';
-        } else {
-            changedCharacter = '0';
-        }
-        individual = substring(individual, 0, changeIndex) + changedCharacter + substring(individual, changeIndex + 1, individual.length());
-    }
-
-    return individual;
-}
-
-std::string printArray(std::array<std::string, 4> array) {
-    std::string returnString;
-
-    returnString = "";
-    int i;
-
-    for (i = 0; i <= array.size() - 1; i++) {
-        returnString = std::string(returnString) + array[i] + "    ";
-    }
-
-    return returnString;
-}
-
-std::string substring(std::string s, int start, int end) {
-    std::string substring;
-
-    substring = "";
-    if (start < s.length()) {
-        if (end > s.length()) {
-            end = s.length();
-        }
-        int index;
-
-        for (index = start; index <= end - 1; index++) {
-            substring = std::string(substring) + s[index];
+    for (char c : individual) {
+        if (c == '1') {
+            countOfOnes++;
         }
     }
 
-    return substring;
+    return static_cast<double>(countOfOnes) / individual.length();
+}
+
+std::string mutate(const std::string& individual) {
+    if (random(0, 1) == 0) {
+        return individual; // no mutation
+    }
+    
+    int changeIndex = random(0, individual.length() - 1);
+    char changedCharacter = (individual[changeIndex] == '0') ? '1' : '0';
+    return individual.substr(0, changeIndex) + changedCharacter + individual.substr(changeIndex + 1);
+}
+
+std::string printArray(const std::array<std::string, 4>& arr) {
+    std::string result;
+
+    for (const auto& s : arr) {
+        result += s + "    ";
+    }
+
+    return result;
 }
